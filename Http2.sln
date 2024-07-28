@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Http2Core", "Http2Core\Http2Core.csproj", "{CE5B74AD-F962-412E-B816-9011E696923D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Http2MuxTest", "Http2MuxTest\Http2MuxTest.csproj", "{FFF05244-2990-4674-A35C-8F9D4FBFD30F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CE5B74AD-F962-412E-B816-9011E696923D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE5B74AD-F962-412E-B816-9011E696923D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE5B74AD-F962-412E-B816-9011E696923D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE5B74AD-F962-412E-B816-9011E696923D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFF05244-2990-4674-A35C-8F9D4FBFD30F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFF05244-2990-4674-A35C-8F9D4FBFD30F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFF05244-2990-4674-A35C-8F9D4FBFD30F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFF05244-2990-4674-A35C-8F9D4FBFD30F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1E47A3B1-F73B-467F-83DB-B51F9F2B02D6}
+	EndGlobalSection
+EndGlobal

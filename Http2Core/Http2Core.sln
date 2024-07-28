@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Http2Core", "Http2Core.csproj", "{72938119-ABBD-48BA-8D9C-F31F9D8672DE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{72938119-ABBD-48BA-8D9C-F31F9D8672DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72938119-ABBD-48BA-8D9C-F31F9D8672DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72938119-ABBD-48BA-8D9C-F31F9D8672DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72938119-ABBD-48BA-8D9C-F31F9D8672DE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8AC415F7-1A92-4676-9A22-E98229A97822}
+	EndGlobalSection
+EndGlobal
