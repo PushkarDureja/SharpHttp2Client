@@ -1,20 +1,19 @@
 using Http2Core;
 using Http2Core.Frames;
 using System.Text;
-using MuxStream = Http2Core.Stream;
 
 namespace Http2MuxTest
 {
     public partial class Form1 : Form
     {
         private Pipe? _pipe;
-        private StreamMultiplexer _clientMux;
-        private StreamMultiplexer _serverMux;
+        private Multiplexer _clientMux;
+        private Multiplexer _serverMux;
         private CancellationTokenSource _cancellationTokenSource;
 
         private readonly int _clientStreamsCount = 4;
         private readonly object _responseBoxLock = new();
-        private readonly List<(MuxStream, List<byte>)> _clientStreams = [];
+        private readonly List<(FrameStream, List<byte>)> _clientStreams = [];
 
         public Form1()
         {
@@ -41,7 +40,7 @@ namespace Http2MuxTest
                 byte[] testBuffer = [0x41, 0x41, 0x41, 0x41];
                 for (int i = 0; i < _clientStreamsCount; i++)
                 {
-                    MuxStream stream = _clientMux.GetStream();
+                    FrameStream stream = _clientMux.GetStream();
                     _clientStreams.Add((stream, [.. testBuffer.Select(b => (byte)(b + i))]));
                 }
             }
@@ -57,7 +56,7 @@ namespace Http2MuxTest
             {
                 while (true)
                 {
-                    MuxStream? stream = await _serverMux.AcceptAsync(cancellationToken);
+                    FrameStream? stream = await _serverMux.AcceptAsync(cancellationToken);
                     if (stream == null)
                         break;
 
@@ -71,13 +70,13 @@ namespace Http2MuxTest
             }
         }
 
-        private async Task ProcessStreamAsync(MuxStream stream, CancellationToken cancellationToken)
+        private async Task ProcessStreamAsync(FrameStream stream, CancellationToken cancellationToken)
         {
             try
             {
                 while (true)
                 {
-                    Frame? frame = await stream.ReadAsync(cancellationToken);
+                    Frame? frame = await stream.ReadFrameAsync(cancellationToken);
                     if (frame == null)
                         break;
 
@@ -93,7 +92,7 @@ namespace Http2MuxTest
                         }
 
                         string replyMessage = $"I received the message \"{message}\", Thanks\r\n";
-                        await stream.WriteAsync(FrameType.Header, 0x5, Encoding.ASCII.GetBytes(replyMessage), cancellationToken);
+                        await stream.WriteFrameAsync(FrameType.Header, 0x5, Encoding.ASCII.GetBytes(replyMessage), cancellationToken);
                     }
                 }
             }
@@ -123,12 +122,12 @@ namespace Http2MuxTest
         private async void SendRequestBtn_Click(object sender, EventArgs e)
         {
             List<Task> tasks = [];
-            foreach ((MuxStream stream, List<byte> headerField) in _clientStreams)
+            foreach ((FrameStream stream, List<byte> headerField) in _clientStreams)
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    await stream.WriteAsync(FrameType.Header, 0x5, [.. headerField]);
-                    Frame? frame = await stream.ReadAsync();
+                    await stream.WriteFrameAsync(FrameType.Header, 0x5, [.. headerField]);
+                    Frame? frame = await stream.ReadFrameAsync();
                     if (frame == null)
                         return;
 

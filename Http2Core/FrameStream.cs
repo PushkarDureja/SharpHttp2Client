@@ -3,19 +3,19 @@ using System.Collections.Concurrent;
 
 namespace Http2Core
 {
-    public class Stream
+    public class FrameStream
     {
         private readonly int _id;
-        private readonly StreamMultiplexer _mux;
+        private readonly Multiplexer _mux;
         private readonly int _readTimeout = -1;
         private readonly ConcurrentQueue<Frame> _pendingReadFrames = new();
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-        volatile bool _fin;
+        volatile bool _connectionEnd;
         volatile int _disposed;
         TaskCompletionSource? _taskCompletionSource;
 
-        public Stream(int id, StreamMultiplexer mux)
+        public FrameStream(int id, Multiplexer mux)
         {
             _id = id;
             _mux = mux;
@@ -26,10 +26,10 @@ namespace Http2Core
             if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
                 return;
 
-            await WriteToStream(null);
+            await WriteFrameToStream(null);
         }
 
-        public async Task<Frame?> ReadAsync(CancellationToken cancellationToken = default)
+        public async Task<Frame?> ReadFrameAsync(CancellationToken cancellationToken = default)
         {
             bool semaphoreReleased = false;
             await _semaphore.WaitAsync(cancellationToken);
@@ -37,7 +37,7 @@ namespace Http2Core
             {
                 if (_pendingReadFrames.IsEmpty)
                 {
-                    if (_fin)
+                    if (_connectionEnd)
                         return null;
 
                     _taskCompletionSource = new TaskCompletionSource();
@@ -57,7 +57,7 @@ namespace Http2Core
                     await _semaphore.WaitAsync(cancellationToken);
                 }
 
-                if (_fin)
+                if (_connectionEnd)
                     return null;
 
                 bool res = _pendingReadFrames.TryDequeue(out Frame? result);
@@ -77,7 +77,7 @@ namespace Http2Core
             }
         }
 
-        public async Task WriteToStream(Frame? frame, CancellationToken cancellationToken = default)
+        public async Task WriteFrameToStream(Frame? frame, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
 
@@ -85,7 +85,7 @@ namespace Http2Core
             {
                 if (frame is null)
                 {
-                    _fin = true;
+                    _connectionEnd = true;
                     _taskCompletionSource?.TrySetResult();
                     return;
                 }
@@ -99,9 +99,9 @@ namespace Http2Core
             }
         }
 
-        public async Task WriteAsync(FrameType type, byte flags, byte[] payload, CancellationToken cancellationToken = default)
+        public async Task WriteFrameAsync(FrameType type, byte flags, byte[] payload, CancellationToken cancellationToken = default)
         {
-            await _mux.WriteFrame(Id, type, flags, payload, cancellationToken);
+            await _mux.WriteFrameAsync(Id, type, flags, payload, cancellationToken);
         }
 
         public int Id => _id;

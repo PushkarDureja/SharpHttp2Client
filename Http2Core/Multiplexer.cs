@@ -3,27 +3,27 @@ using System.Collections.Concurrent;
 
 namespace Http2Core
 {
-    public class StreamMultiplexer
+    public class Multiplexer
     {
         private readonly int _maxStreamCount;
-        private readonly System.IO.Stream _stream;
+        private readonly Stream _stream;
         private readonly CancellationTokenSource _tokenSource;
-        private readonly ConcurrentDictionary<int, Stream> _streams = new();
-        private readonly ConcurrentQueue<Stream> _newStreams = new();
+        private readonly ConcurrentDictionary<int, FrameStream> _streams = new();
+        private readonly ConcurrentQueue<FrameStream> _newStreamsQueue = new();
 
         private bool _disposed;
         private volatile int _lastStreamId = 0;
         private TaskCompletionSource _acceptTaskSource = new TaskCompletionSource();
 
-        public StreamMultiplexer(System.IO.Stream stream, int maxConcurrentStreamCount = 100)
+        public Multiplexer(Stream stream, int maxConcurrentStreamCount = 100)
         {
             _stream = stream;
             _maxStreamCount = maxConcurrentStreamCount;
             _tokenSource = new CancellationTokenSource();
-            _ = Task.Run(() => ReadFrameAsync(_tokenSource.Token), _tokenSource.Token);
+            _ = Task.Run(() => ReadAsync(_tokenSource.Token), _tokenSource.Token);
         }
 
-        public Stream GetStream()
+        public FrameStream GetStream()
         {
             int newStreamId;
             int originalStreamId;
@@ -46,7 +46,7 @@ namespace Http2Core
                 }
             } while (Interlocked.CompareExchange(ref _lastStreamId, newStreamId, originalStreamId) != originalStreamId);
 
-            Stream stream = new(newStreamId, this);
+            FrameStream stream = new(newStreamId, this);
             if (!_streams.TryAdd(newStreamId, stream))
             {
                 throw new IOException("StreamId already exists");
@@ -55,15 +55,15 @@ namespace Http2Core
             return stream;
         }
 
-        public async Task<Stream?> AcceptAsync(CancellationToken cancellationToken)
+        public async Task<FrameStream?> AcceptAsync(CancellationToken cancellationToken)
         {
-            if (_newStreams.IsEmpty)
+            if (_newStreamsQueue.IsEmpty)
                 await _acceptTaskSource.Task;
 
-            if (_newStreams.IsEmpty)
+            if (_newStreamsQueue.IsEmpty)
                 return null;
 
-            if (_newStreams.TryDequeue(out Stream? stream) && stream != null)
+            if (_newStreamsQueue.TryDequeue(out FrameStream? stream) && stream != null)
             {
                 _acceptTaskSource = new TaskCompletionSource();
                 return stream;
@@ -80,7 +80,7 @@ namespace Http2Core
             _tokenSource.Cancel();
             _acceptTaskSource.SetResult();
 
-            foreach (KeyValuePair<int, Stream> item in _streams)
+            foreach (KeyValuePair<int, FrameStream> item in _streams)
             {
                 await item.Value.DisposeAsync();
             }
@@ -98,7 +98,7 @@ namespace Http2Core
             catch (ObjectDisposedException) { }
         }
 
-        public async Task WriteFrame(int streamId, FrameType type, byte flags, byte[] payload, CancellationToken cancellationToken = default)
+        public async Task WriteFrameAsync(int streamId, FrameType type, byte flags, byte[] payload, CancellationToken cancellationToken = default)
         {
             int payloadLength = payload.Length;
             byte[] frameBuffer = new byte[9 + payloadLength];
@@ -115,21 +115,21 @@ namespace Http2Core
             await _stream.FlushAsync(cancellationToken);
         }
 
-        private async Task ProcessFrame(Frame frame, CancellationToken cancellationToken)
+        private async Task ProcessFrameAsync(Frame frame, CancellationToken cancellationToken)
         {
-            Stream newStream = new(frame.StreamId, this);
+            FrameStream newStream = new(frame.StreamId, this);
 
-            Stream stream = _streams.GetOrAdd(frame.StreamId, newStream);
+            FrameStream stream = _streams.GetOrAdd(frame.StreamId, newStream);
             if (stream == newStream)
             {
-                _newStreams.Enqueue(newStream);
+                _newStreamsQueue.Enqueue(newStream);
                 _acceptTaskSource.SetResult();
             }
 
-            await stream.WriteToStream(frame, cancellationToken);
+            await stream.WriteFrameToStream(frame, cancellationToken);
         }
 
-        private async Task ReadFrameAsync(CancellationToken cancellationToken)
+        private async Task ReadAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -162,7 +162,7 @@ namespace Http2Core
                     Frame frame = FrameFactory.Create(length, (FrameType)type, flags, streamId, payload);
                     frame.Parse();
 
-                    await ProcessFrame(frame, cancellationToken);
+                    await ProcessFrameAsync(frame, cancellationToken);
                 }
             }
             catch (OperationCanceledException) { }
